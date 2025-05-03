@@ -1,0 +1,71 @@
+names(dam_data) = make_clean_names(names(dam_data))
+dam_data %>%
+  select(loss_given_failure_prop_qm, loss_given_failure_liab_qm, loss_given_failure_bi_qm) %>%
+  drop_na() %>%
+  cor()
+
+names(df2) = make_clean_names(names(df2))
+df3 = df2 %>%
+  select(id, height_m, surface_km2, distance_to_nearest_city_km, loss_given_failure_prop_qm, region, 
+         length_km, drainage_km2, hazard, loss_given_failure_liab_qm, regulated_dam, volume_m3, assessment, loss_given_failure_bi_qm, year_completed, 
+         assessment_date, population, years_modified, inspection_frequency, probability_of_failure, gdp, manufacturing, transportation, agriculture, 
+         total, population, large_urban, urban) %>%
+  mutate(gdp_agri = gdp*agriculture, gdp_manu = gdp*manufacturing, gdp_trans = gdp*transportation, pop_large_urban = population*large_urban/100, pop_urban = population*urban/100) %>%
+  select(-population, -urban, - large_urban, -agriculture, -manufacturing, -transportation)
+
+thu = cor(
+  drop_na(select(df3, where(is.numeric)))
+) 
+as.data.frame(thu[, 'loss_given_failure_prop_qm']) %>%
+  rename(correlation = `thu[, "loss_given_failure_prop_qm"]`) %>%
+  mutate(variable = rownames(.)) %>%
+  arrange(desc(abs(correlation))) %>%
+  head(11)
+
+  
+# => tương quan yếu, coi như độc lập
+#loss_give_failure
+
+failure = df3 %>%
+  select(loss_given_failure_prop_qm, length_km, volume_m3, height_m, surface_km2, drainage_km2) %>%
+  drop_na()
+
+
+cor(failure[])
+model_loss_prop = lm(loss_given_failure_prop_qm ~ . + length_km:volume_m3 + drainage_km2:surface_km2 , failure)
+summary(model_loss_prop)
+ad.test(model_loss_prop$residuals)
+bptest(model_loss_prop)
+plot(model_loss_prop$fitted.values, model_loss_prop$residuals)
+vif(model_loss_prop)
+weights <- 1 / fitted(model_loss_prop)^2
+
+model_loss_prop_just = lm(loss_given_failure_prop_qm ~ ., failure, weights = weights)
+bptest(model_loss_prop_just)
+ad.test(model_loss_prop_just$residuals)
+plot(model_loss_prop_just$residuals, model_loss_prop_just$fitted.values)
+summary(model_loss_prop_just)
+
+#loss_given_liab
+liab = dam_data %>%
+  select(loss_given_failure_liab_qm, drainage_km2, distance_to_nearest_city_km, surface_km2, height_m, region) %>%
+  dummy_cols(select_columns = 'region', remove_first_dummy = TRUE, remove_selected_columns = TRUE) %>%
+  drop_na()
+
+model_loss_liab = lm(loss_given_failure_liab_qm ~ ., liab)
+summary(model_loss_liab)
+
+
+bptest(model_loss_liab)
+ad.test(model_loss_liab$residuals)
+
+
+
+
+
+
+
+
+
+
+
